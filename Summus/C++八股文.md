@@ -1,4 +1,4 @@
-# C++八股文
+<h1 style="text-align:center">C++八股文</h1>
 
 ## C++面向对象的三大特性
 
@@ -45,7 +45,9 @@ C++的多态分为静态多态和动态多态。
 
 - shared_ptr多个指针指向相同的对象。shared_ptr使用引用计数，每一个shared_ptr的拷贝都指向相同的内存。每使用他一次，内部的引用计数加1，每析构一次，内部的引用计数减1，减为0时，自动删除所指向的堆内存。shared_ptr内部的引用计数是线程安全的，但是对象的读取需要加锁，因为shared_ptr的指向对象部分并不是线程安全的。
 - unique_ptr独占其所指对象，同一时刻只能有一个unique_ptr指向给定对象（通过禁止拷贝语义、只有移动语义来实现）。与原始指针相比，unique_ptr由于其RAII的特性，使得在出现异常的情况下，动态资源仍然能得到释放。
-- weak_ptr是为了配合shared_ptr而引入的一种智能指针，因为它不具有普通指针的行为。weak_ptr可以从一个shared_ptr或者另一个weak_ptr对象构造，获得资源的观测权。但weak_ptr没有共享资源，它的构造不会引起指针引用计数的增加。C++11中被废弃。
+- weak_ptr是为了配合shared_ptr而引入的一种智能指针，因为它不具有普通指针的行为。weak_ptr可以从一个shared_ptr或者另一个weak_ptr对象构造，获得资源的观测权。但weak_ptr没有共享资源，它的构造不会引起指针引用计数的增加。
+
+Tips:auto_ptr在C++11中被废弃，C++17中被移除。
 
 ## 对锁有没有了解，介绍一下？
 
@@ -84,7 +86,7 @@ C++的栈stack不是独立容器，是基于其他的序列容器的。默认是
 
 - deque内存连续，由多个固定大小内存块组成
 - vector：完全连续，是开辟了一大块大的内存块用于使用
-- list：非连续，双休链表节点分散存储
+- list：非连续，双向链表节点分散存储
 
 ## shared_ptr引用计数的原理是什么？什么时候增加引用计数，什么时候减少引用计数？
 
@@ -184,7 +186,7 @@ C++中的static关键字具有多种用途。可以声明静态成员变量，�
 - 内存分配⽅式不同：malloc分配的内存是未初始化的，⽽new不仅分配了内存，还调⽤了对象的构造函数来初始化对象。
 - 使⽤语法不同：malloc使⽤时需要指定分配内存的⼤⼩，如malloc(sizeof(int)), 但new不⽤，使⽤更加简洁，如：new int
 - 返回类型：malloc返回void*类型指针，需要强制转换成其它指定类型，⽽new直接返回响应的数据类型的指针，无需类型转换。
-- 错误处理：内存分配失败后，malloc返回null, ⽽new会抛出std::bad_malloc异常。
+- 错误处理：内存分配失败后，malloc返回null, ⽽new会抛出std::bad_alloc异常。
 - 配对操作：malloc分配内存使用free释放，⽽new分配内存要使用delete释放。
 
 ## 什么是左值？什么是右值？
@@ -244,7 +246,8 @@ int main()
 ```
 
 输出结果：
-![alt text](image.png)
+
+![delete this后访问成员变量的乱码输出](image.png)
 
 ## volatile关键字的作用？
 
@@ -292,7 +295,7 @@ volatile关键字的作用就是防止编译器优化，编译器每次读变量
 
 ```c++
 #include <iostream>
-usingnamespacestd;
+using namespace std;
 
 class Animal {
 public:
@@ -313,13 +316,13 @@ int main() {
     Animal* animal = new Dog();
     animal->speak();  // 输出: Woof!
     delete animal;
-    return0;
+    return 0;
 }
 ```
 
 ```c++
 #include <iostream>
-usingnamespacestd;
+using namespace std;
 
 class Shape {// 抽象基类
 public:
@@ -339,7 +342,7 @@ int main() {
     Shape* shape = new Circle();
     shape->draw();  // 输出: Drawing a circle
     delete shape;
-    return0;
+    return 0;
 }
 ```
 
@@ -382,7 +385,7 @@ public:
     virtual void foo() final;  
 };  
 class Derived : public Base {  
-    void foo() override; // ❌ 编译错误：foo是final的[3,9](@ref)  
+    void foo() override; // ❌ 编译错误：foo是final的[3,9]
 };  
 ```
 
@@ -395,7 +398,7 @@ C++作为一种强类型语言，类型匹配比较麻烦，所以借助编译�
 ```c++
 int a = 10;
 decltype(a) b = 20;     // b 为 int
-decltype(a + 3.14) c;   // c 为 double[5](@ref)
+decltype(a + 3.14) c;   // c 为 double[5]
 ```
 
 ## function,lambda,bind之间的关系？
@@ -716,7 +719,7 @@ std::string s2 = std::move(s1);  // s1的资源被转移给s2，s1变为空
 
 ## deque和vector的区别？内存布局有啥区别？
 
-- queue:​分段连续存储，由多个固定大小的内存块（chunks）组成，通过中控器（指针数组）管理逻辑连续性。动态分配新内存块，只需更新中控器的指针，​无需移动现有元素。扩容成本更低。无法保证整体内存连续。需高频头尾操作时使用queue。
+- deque:​分段连续存储，由多个固定大小的内存块（chunks）组成，通过中控器（指针数组）管理逻辑连续性。动态分配新内存块，只需更新中控器的指针，​无需移动现有元素。扩容成本更低。无法保证整体内存连续。需高频头尾操作时使用queue。
 - vector:​单块连续内存，元素**物理地址连续**,容量不足时，重新分配一块更大的连续内存,严格连续，支持直接传递首地址。操作集中在尾部。
 
 ## weak_ptr如何解决循环引用？
@@ -1208,7 +1211,7 @@ C++异常处理的核心开销来源：
 
 ```c++
 /*方法1*/
-# program once
+# pragma once
 /*方法2*/
 # ifndef
 ```
