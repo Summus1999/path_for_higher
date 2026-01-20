@@ -1,14 +1,14 @@
-# 阿里云网络研发工程师 - 6个月冲刺计划
+# 云原生网络方向 - 6个月冲刺计划
 
-目标岗位：阿里云高级网络研发工程师
-项目方向：DPDK高性能网关/负载均衡器
+目标岗位：云原生网络研发工程师 / Service Mesh / eBPF 方向
+项目方向：C++ P2P/NAT 网络库 + Kubernetes eBPF 网络观测系统
 
 个人背景：
 - 1年C语言协议栈开发经验（ARP/ICMP/TCP/UDP/DHCP/IPsec）
-- BGP协议有基础
-- Linux高并发IO模型有实战
+- OPPO云连接项目：多重NAT穿透、STUN、虚拟网卡方案
+- Linux网络编程有实战（epoll、socket）
 - 当前Rust网络开发在职
-- C++现代特性需补齐，DPDK从零开始
+- 目标：云原生网络 / Service Mesh / eBPF 方向
 
 时间安排：
 - 工作日：19:00-22:00（3h）
@@ -17,165 +17,239 @@
 
 | 时段（工作日） | 内容             | 时长  |
 | -------------- | ---------------- | ----- |
-| 19:00-20:00    | C++/DPDK学习     | 1h    |
+| 19:00-20:00    | C++/eBPF学习     | 1h    |
 | 20:00-21:00    | 项目编码         | 1h    |
 | 21:00-22:00    | LeetCode刷题     | 1h    |
 | 22:00-22:20    | 技术书籍阅读     | 20min |
 
 | 时段（休息日） | 内容             | 时长  |
 | -------------- | ---------------- | ----- |
-| 09:00-12:00    | DPDK/项目开发    | 3h    |
+| 09:00-12:00    | 项目开发         | 3h    |
 | 14:00-18:00    | 项目开发         | 4h    |
 | 20:00-21:30    | LeetCode刷题     | 1.5h  |
 | 21:30-22:00    | 技术书籍阅读     | 30min |
 
 ---
 
-## 阶段一：C++现代特性 + DPDK入门（第1-4周）
+## 阶段一：C++ P2P/NAT 项目（第1-7周）
 
-阶段目标：C++11/14/17核心特性掌握，DPDK环境搭建并能跑通基础示例
+阶段目标：使用原生 epoll + socket 实现 P2P/NAT 穿透 demo，展示现代 C++ 能力和网络编程底层功力
 
-| 周数 | C++学习内容 | DPDK学习内容 | LeetCode（每周6题） | 产出 |
-| ---- | ----------- | ------------ | ------------------- | ---- |
-| 1 | 智能指针（shared_ptr/unique_ptr/weak_ptr原理）、移动语义（std::move/std::forward）、RAII | DPDK官方文档阅读、环境搭建（Ubuntu + 虚拟机/物理机）、理解PMD/UIO/VFIO | 3 Easy、7 Medium（数组/链表/哈希） | 能解释智能指针引用计数实现，DPDK helloworld跑通 |
-| 2 | lambda表达式、std::function/std::bind、模板基础（变参模板、enable_if） | DPDK内存管理（rte_mempool/rte_mbuf）、大页内存原理、NUMA感知 | 2 Easy、8 Medium（字符串/双指针） | 实现简单的对象池，理解DPDK零拷贝设计 |
-| 3 | std::atomic内存模型（memory_order）、std::thread/mutex/condition_variable | DPDK多核编程（lcore、rte_eal_remote_launch）、run-to-completion模型 | 2 Easy、8 Medium（二叉树/BFS/DFS） | 实现无锁队列，跑通DPDK多核示例 |
-| 4 | C++17特性（optional/variant/string_view）、constexpr、结构化绑定 | DPDK收发包基础（rte_eth_rx_burst/tx_burst）、l2fwd示例精读 | 2 Easy、8 Medium（动态规划/滑动窗口） | 能手写l2fwd核心逻辑，理解收发包流程 |
+### 第1周：项目骨架 + epoll 事件循环
 
-第4周末检查点：
-- 能手写智能指针简化实现
-- 能解释DPDK为什么快（绕过内核、大页内存、轮询、批量处理）
-- LeetCode完成40题
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| 项目初始化 | CMake 构建、目录结构、编码规范 | 项目骨架搭建完成 |
+| epoll 事件循环 | 封装 EventLoop 类，支持添加/删除 fd、事件回调 | event_loop.cpp/h |
+| 基础 TCP 封装 | 非阻塞 socket、TcpListener、TcpConnection（RAII） | tcp_connection.cpp/h |
+| Echo Server | 用事件循环实现简单的 TCP Echo Server | 验证事件循环正确性 |
+| LeetCode | 6题（数组/链表） | - |
+
+**C++ 重点**：智能指针（shared_ptr/unique_ptr）、RAII、std::function 回调
+
+### 第2周：UDP 封装 + 信令服务器
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| UDP 封装 | UdpSocket 类，支持非阻塞收发、绑定端口 | udp_socket.cpp/h |
+| 信令协议设计 | 定义 JSON 消息格式（注册、候选交换、心跳） | protocol.h |
+| 信令服务器 | 接受客户端注册、存储地址信息、转发候选地址 | signaling_server.cpp |
+| 单元测试 | 信令消息解析测试 | tests/ |
+| LeetCode | 6题（哈希表/字符串） | - |
+
+**C++ 重点**：lambda 表达式、std::map/unordered_map、JSON 解析（nlohmann/json）
+
+### 第3周：NAT 类型探测
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| STUN 协议基础 | 理解 STUN Binding Request/Response | - |
+| NAT 探测逻辑 | 实现简化版 NAT 类型探测（Full Cone / Symmetric 等） | nat_detector.cpp/h |
+| 信令客户端 | 连接信令服务器、注册、接收对端候选 | signaling_client.cpp/h |
+| 集成测试 | 两个客户端通过信令交换地址 | - |
+| LeetCode | 6题（双指针/滑动窗口） | - |
+
+**C++ 重点**：std::thread、std::mutex、条件变量
+
+### 第4周：UDP 打洞 + P2P 连接
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| 打洞逻辑 | 双方同时向对方发送 UDP 包，尝试建立直连 | hole_puncher.cpp/h |
+| 连接状态机 | Init → Signaling → Probing → Connected / Fallback | connection_state.cpp/h |
+| 超时重试 | 打洞超时后重试，多次失败后回退 | - |
+| 端到端测试 | 两个客户端在同一 NAT 下成功打洞 | - |
+| LeetCode | 6题（二叉树/BFS） | - |
+
+**C++ 重点**：std::atomic、内存模型基础、状态机设计
+
+### 第5周：中继回退 + 心跳保活
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| 中继服务 | 信令服务器兼任中继，转发打洞失败的流量 | relay_server.cpp |
+| 回退逻辑 | 打洞失败后自动切换到中继模式 | - |
+| 心跳保活 | 定时发送心跳包，超时断开 | heartbeat.cpp/h |
+| 断线重连 | 检测连接断开，触发重新打洞/重连 | - |
+| LeetCode | 6题（动态规划） | - |
+
+**C++ 重点**：定时器实现（timerfd 或自定义）、std::chrono
+
+### 第6周：功能完善 + 错误处理
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| 日志系统 | 集成 spdlog，关键路径打印日志 | logger.h |
+| 配置文件 | 支持 JSON 配置（服务器地址、超时参数等） | config.cpp/h |
+| 错误处理 | 完善 socket 错误、超时、异常情况处理 | - |
+| 简单应用 | 基于 P2P 通道的简易聊天/文件传输 demo | demo/ |
+| LeetCode | 6题（回溯/贪心） | - |
+
+**C++ 重点**：异常处理、RAII 资源管理、C++17 optional/variant
+
+### 第7周：打磨 + 文档 + 架构图
+
+| 任务 | 具体内容 | 产出 |
+| ---- | -------- | ---- |
+| 代码审查 | 检查代码风格、命名规范、注释完善 | - |
+| README | 项目介绍、架构说明、使用方法、构建指南 | README.md |
+| 架构图 | 绘制系统架构图、连接流程图 | docs/architecture.png |
+| 面试准备 | 整理项目亮点、可能被问到的技术点 | - |
+| LeetCode | 6题（图论） | - |
+
+**第7周末检查点：**
+- 项目能在本地两台机器/进程间成功建立 P2P 连接
+- 能讲清楚：epoll 事件循环、NAT 类型探测、UDP 打洞原理、状态机设计
+- 代码展示现代 C++ 特性：智能指针、RAII、lambda、多线程
+- LeetCode 完成 42 题
 
 ---
 
-## 阶段二：DPDK深入 + 项目骨架（第5-10周）
+## 阶段二：eBPF + Kubernetes 云原生网络观测（第8-19周）
 
-阶段目标：深入理解DPDK核心机制，搭建网关项目框架
+阶段目标：在 Kubernetes 环境下实现基于 eBPF 的网络观测系统，完成云原生网络方向的项目积累
 
-| 周数 | DPDK深入内容 | 项目任务 | LeetCode（每周6题） | 产出 |
-| ---- | ------------ | -------- | ------------------- | ---- |
-| 5 | 网卡队列配置（RSS/多队列）、流表（rte_flow）基础 | 项目架构设计：确定模块划分（收包/解析/转发/发包） | 5 Medium（哈希表）、5 Medium（堆） | 项目设计文档、目录结构 |
-| 6 | 数据包解析（rte_ether.h/rte_ip.h/rte_tcp.h）、报文构造 | 实现L2/L3/L4头部解析模块 | 5 Medium（链表）、5 Medium（二叉树） | 能解析并打印收到的包头信息 |
-| 7 | DPDK hash库（rte_hash）、LPM路由表（rte_lpm） | 实现五元组连接表（session table） | 5 Medium（图论）、5 Medium（动态规划） | 连接表增删查功能完成 |
-| 8 | 多核架构设计（pipeline vs run-to-completion）、核间通信（rte_ring） | 实现多核收发包框架（1个核收，N个核处理，1个核发） | 5 Medium（回溯）、5 Medium（贪心） | 多核架构跑通，能观察到负载分担 |
-| 9 | 定时器（rte_timer）、计数器（rte_metrics） | 实现连接老化机制、基础统计（PPS/BPS/丢包率） | 5 Medium（字符串）、5 Medium（前缀和） | 统计信息可打印输出 |
-| 10 | KNI接口（rte_kni）、与内核协议栈交互 | 实现慢路径处理（ARP/ICMP送内核） | 5 Medium（二分查找）、5 Medium（单调栈） | ARP请求能正确响应 |
+### 第8-9周：eBPF 基础 + 开发环境
 
-第10周末检查点：
-- 项目能收包、解析、建立连接表、多核转发、发包
-- 能解释DPDK多核编程模型（core affinity、cache line对齐、避免false sharing）
-- LeetCode完成100题
+| 周数 | 学习内容 | 实践任务 | LeetCode | 产出 |
+| ---- | -------- | -------- | -------- | ---- |
+| 8 | eBPF 原理：BPF 字节码、verifier、map 类型、程序类型（kprobe/tracepoint/tc/xdp） | 搭建 eBPF 开发环境（clang/llvm/libbpf）、跑通 hello world | 6题 | eBPF 环境就绪 |
+| 9 | libbpf 使用：CO-RE、BPF skeleton、map 操作 | 实现简单的 syscall 追踪程序（如追踪 open/read） | 6题 | 第一个 eBPF 程序 |
 
----
+### 第10-11周：网络相关 eBPF hook 点
 
-## 阶段三：负载均衡核心功能（第11-16周）
+| 周数 | 学习内容 | 实践任务 | LeetCode | 产出 |
+| ---- | -------- | -------- | -------- | ---- |
+| 10 | 网络 eBPF hook：tc（Traffic Control）、XDP、socket 相关 tracepoint | 实现 TCP 连接追踪：hook tcp_v4_connect/tcp_close | 6题 | 能打印 TCP 连接建立/关闭事件 |
+| 11 | eBPF map 进阶：per-cpu map、LRU map、ring buffer | 用 map 统计每个 IP 的连接数、发送/接收字节数 | 6题 | 网络统计 eBPF 程序 |
 
-阶段目标：实现负载均衡核心算法，项目具备基本可用性
+### 第12-13周：用户态 Agent 开发（C++）
 
-| 周数 | 核心功能 | 实现细节 | LeetCode（每周6题） | 产出 |
-| ---- | -------- | -------- | ------------------- | ---- |
-| 11 | 负载均衡算法-轮询/加权轮询 | 后端服务器池管理、权重配置、轮询调度 | 5 Medium、5 Hard（阿里高频） | 轮询调度功能完成 |
-| 12 | 负载均衡算法-一致性哈希 | 虚拟节点、哈希环实现、会话保持 | 5 Medium、5 Hard | 一致性哈希调度功能完成 |
-| 13 | DNAT/SNAT实现 | 目的地址转换、源地址转换、NAT表管理 | 5 Medium、5 Hard | NAT功能跑通，能正确转发 |
-| 14 | 健康检查 | TCP探活、HTTP探活、后端状态管理 | 5 Medium、5 Hard | 能自动剔除故障后端 |
-| 15 | 连接复用与会话保持 | 基于源IP的会话保持、连接超时处理 | 5 Medium、5 Hard | 同一客户端请求能路由到同一后端 |
-| 16 | 限流与QoS | 令牌桶算法、连接数限制、带宽限制 | 5 Medium、5 Hard | 能限制单IP连接数和速率 |
+| 周数 | 开发内容 | 具体任务 | LeetCode | 产出 |
+| ---- | -------- | -------- | -------- | ---- |
+| 12 | Agent 骨架 | 加载 eBPF 程序、读取 map 数据、定时采集 | 6题 | agent 基础框架 |
+| 13 | Prometheus 指标暴露 | 实现 HTTP server、暴露 /metrics 端点（Prometheus 格式） | 6题 | 指标可被 Prometheus 抓取 |
 
-第16周末检查点：
-- 项目具备完整的L4负载均衡功能
-- 能解释一致性哈希原理、NAT实现、健康检查机制
-- LeetCode完成160题
+### 第14-15周：Kubernetes 部署
 
----
+| 周数 | 学习/开发内容 | 具体任务 | LeetCode | 产出 |
+| ---- | ------------- | -------- | -------- | ---- |
+| 14 | K8s 基础：Pod/Service/DaemonSet、网络模型（CNI） | 搭建单节点 k8s（microk8s/k3s）、部署简单应用 | 6题 | k8s 环境就绪 |
+| 15 | 容器化 Agent | Dockerfile、DaemonSet yaml、privileged 权限配置 | 6题 | Agent 以 DaemonSet 运行 |
 
-## 阶段四：性能优化 + 项目完善（第17-22周）
+### 第16-17周：可观测性完善
 
-阶段目标：性能调优达到生产级别，项目具备面试展示价值
+| 周数 | 开发内容 | 具体任务 | LeetCode | 产出 |
+| ---- | -------- | -------- | -------- | ---- |
+| 16 | 指标丰富化 | 添加更多指标：TCP RTT、重传次数、连接延迟分布 | 6题 | 指标覆盖完整 |
+| 17 | Grafana 大盘 | 部署 Prometheus + Grafana、创建监控大盘 | 6题 | 可视化大盘完成 |
 
-| 周数 | 优化/完善内容 | 具体任务 | LeetCode（每周5题） | 产出 |
-| ---- | ------------- | -------- | ------------------- | ---- |
-| 17 | 性能优化-数据结构 | 连接表优化（hash冲突处理）、内存预分配、cache line对齐 | 5 Medium、3 Hard | 连接表查询性能提升 |
-| 18 | 性能优化-批处理 | 批量收发包优化、预取（prefetch）、分支预测优化 | 5 Medium、3 Hard | PPS提升，达到百万级 |
-| 19 | 性能优化-NUMA | NUMA感知内存分配、核绑定优化、跨NUMA访问消除 | 5 Medium、3 Hard | 多NUMA节点性能线性扩展 |
-| 20 | 配置与管理 | 配置文件解析（JSON/YAML）、运行时配置热加载、CLI管理接口 | 5 Medium、3 Hard | 支持配置文件和命令行管理 |
-| 21 | 监控与可观测性 | Prometheus metrics导出、日志系统（spdlog）、性能统计 | 5 Medium、3 Hard | 可接入监控系统 |
-| 22 | 压测与报告 | wrk/pktgen压测、性能瓶颈分析、压测报告撰写 | 5 Medium、3 Hard | 压测报告（含QPS/延迟/CPU利用率） |
+### 第18-19周：项目打磨 + 文档
 
-第22周末检查点：
-- 单核PPS达到1M+，4核达到3M+
-- 项目有完整的配置、监控、日志
-- LeetCode完成208题
+| 周数 | 任务 | 具体内容 | LeetCode | 产出 |
+| ---- | ---- | -------- | -------- | ---- |
+| 18 | 代码完善 | 错误处理、日志、配置化、代码审查 | 6题 | 代码质量提升 |
+| 19 | 文档 + 架构图 | README、架构图、部署指南、面试要点整理 | 6题 | 项目完整可展示 |
+
+**第19周末检查点：**
+- eBPF 程序能采集 Pod 间 TCP 连接指标
+- Agent 以 DaemonSet 运行，指标可被 Prometheus 抓取
+- Grafana 大盘能展示网络观测数据
+- 能讲清楚：eBPF 程序类型、hook 点选择、map 使用、k8s 网络模型
+- LeetCode 完成 114 题
 
 ---
 
-## 阶段五：面试冲刺（第23-26周）
+## 阶段三：面试冲刺（第20-26周）
 
-阶段目标：八股文熟练、项目能深挖、算法手写无压力
+阶段目标：八股文熟练、两个项目能深挖、算法手写无压力
 
-| 周数 | 八股文重点 | 项目复盘 | LeetCode（每周4题+错题） | 产出 |
-| ---- | ---------- | -------- | ------------------------ | ---- |
-| 23 | C++高频：虚函数表、智能指针实现、移动语义、内存模型 | 整理项目亮点：为什么选DPDK、架构设计思路、性能优化过程 | 10题+重做错题 | C++八股文笔记 |
-| 24 | 网络高频：TCP状态机、拥塞控制、DPDK原理、epoll vs DPDK | 准备项目深挖问题：一致性哈希细节、NAT表设计、多核通信 | 10题+重做错题 | 网络八股文笔记 |
-| 25 | 系统高频：进程/线程、内存管理、NUMA、cache一致性 | 准备系统设计题：设计SLB、设计高性能网关 | 10题+重做错题 | 系统八股文笔记 |
-| 26 | 模拟面试 + 查漏补缺 | 项目代码精读，确保每行代码都能解释 | 12题+错题重做 | 面试准备完成 |
+| 周数 | 八股文重点 | 项目复盘 | LeetCode | 产出 |
+| ---- | ---------- | -------- | -------- | ---- |
+| 20 | C++ 高频：虚函数表、智能指针实现、移动语义、内存模型、RAII | 整理 P2P/NAT 项目亮点：epoll 封装、状态机设计、NAT 穿透方案 | 8题+错题 | C++ 八股文笔记 |
+| 21 | 网络高频：TCP 状态机、拥塞控制、NAT 原理、epoll 原理（LT/ET）、UDP 打洞 | 整理 P2P/NAT 项目深挖问题：为什么用 epoll、如何处理半包、打洞失败率 | 8题+错题 | 网络八股文笔记 |
+| 22 | 云原生高频：K8s 网络模型、CNI、Service Mesh 原理、eBPF 原理 | 整理 eBPF 项目亮点：为什么选 eBPF、hook 点选择、性能影响 | 8题+错题 | 云原生八股文笔记 |
+| 23 | 系统高频：进程/线程、内存管理、Linux 网络栈、socket 编程 | 准备系统设计题：设计 NAT 网关、设计网络监控系统 | 8题+错题 | 系统八股文笔记 |
+| 24 | 算法高频专项 | 两个项目代码精读，确保每行代码都能解释 | 10题+错题 | - |
+| 25 | 模拟面试 | 找朋友/AI 模拟面试，查漏补缺 | 10题+错题 | - |
+| 26 | 最后冲刺 | 复习所有笔记、错题重做、心态调整 | 错题重做 | 面试准备完成 |
 
-第26周末最终目标：
-- LeetCode 250+题（150+ Medium，60+ Hard）
-- 项目：DPDK高性能负载均衡器（GitHub仓库 + 架构图 + 压测报告）
-- 八股文：C++/网络/系统核心问题能流畅作答
-- 能手写：智能指针、LRU、一致性哈希、令牌桶、生产者消费者
+**第26周末最终目标：**
+- LeetCode 180+ 题（120+ Medium，30+ Hard）
+- 项目一：C++ P2P/NAT 网络库（GitHub + 架构图 + 技术博客）
+- 项目二：Kubernetes eBPF 网络观测系统（GitHub + Grafana 大盘截图）
+- 八股文：C++/网络/云原生/系统核心问题能流畅作答
+- 能手写：智能指针、LRU、epoll echo server、简单状态机
 
 ---
 
 ## 算法题分类规划
 
-总目标：250+题，聚焦阿里高频
+总目标：180+ 题，聚焦高频 + 网络/系统相关
 
 | 类型 | 题数 | 重点题目 |
 | ---- | ---- | -------- |
-| 链表 | 25 | 反转链表、合并K个链表、LRU Cache、复制带随机指针的链表、环形链表、排序链表 |
-| 哈希表 | 25 | 两数之和、三数之和、LRU/LFU、设计哈希表、字母异位词分组、最长连续序列 |
-| 二叉树 | 25 | 层序遍历、最近公共祖先、二叉树序列化、BST相关、路径总和、二叉树直径 |
-| 动态规划 | 35 | 最长子序列系列、背包问题、编辑距离、股票问题、打家劫舍、零钱兑换 |
-| 滑动窗口 | 20 | 最小覆盖子串、无重复最长子串、滑动窗口最大值、字符串排列、长度最小子数组 |
-| 双指针 | 20 | 接雨水、盛水最多的容器、三数之和、四数之和、移除元素 |
-| BFS/DFS | 25 | 岛屿数量、课程表、单词搜索、图的遍历、全排列、子集、组合总和 |
-| 二分查找 | 20 | 搜索旋转数组、寻找峰值、分割数组最大值、搜索二维矩阵、在排序数组中查找 |
-| 贪心/栈/堆 | 30 | 跳跃游戏、区间调度、合并区间、有效括号、最小栈、前K个高频元素 |
-| 系统设计题 | 25 | LRU/LFU Cache、设计Twitter、设计哈希Map、最小堆实现、Trie树 |
+| 链表 | 20 | 反转链表、合并K个链表、LRU Cache、复制带随机指针的链表、环形链表 |
+| 哈希表 | 20 | 两数之和、三数之和、LRU/LFU、设计哈希表、字母异位词分组 |
+| 二叉树 | 20 | 层序遍历、最近公共祖先、二叉树序列化、BST相关、路径总和 |
+| 动态规划 | 25 | 最长子序列系列、背包问题、编辑距离、股票问题、零钱兑换 |
+| 滑动窗口 | 15 | 最小覆盖子串、无重复最长子串、滑动窗口最大值、字符串排列 |
+| 双指针 | 15 | 接雨水、盛水最多的容器、三数之和、移除元素 |
+| BFS/DFS | 20 | 岛屿数量、课程表、单词搜索、图的遍历、全排列、子集 |
+| 二分查找 | 15 | 搜索旋转数组、寻找峰值、分割数组最大值、搜索二维矩阵 |
+| 贪心/栈/堆 | 20 | 跳跃游戏、区间调度、合并区间、有效括号、前K个高频元素 |
+| 系统设计题 | 10 | LRU/LFU Cache、设计哈希Map、最小堆实现、Trie树 |
 
 ---
 
 ## 学习资源
 
-C++现代特性：
+### C++ 现代特性
 - Effective Modern C++（Scott Meyers）
 - C++ Concurrency in Action
+- Linux高性能服务器编程（游双）- epoll/socket 部分
 
-DPDK：
-- DPDK官方文档 + Programmer's Guide
-- 深入浅出DPDK（朱河清）
-- DPDK源码（examples/l2fwd、examples/l3fwd）
+### eBPF / 云原生网络
+- Learning eBPF（Liz Rice）
+- BPF Performance Tools（Brendan Gregg）
+- libbpf-bootstrap 官方示例
+- Kubernetes 官方文档（网络部分）
+- Cilium 文档（了解 eBPF 在 k8s 中的应用）
 
-网络/系统：
+### 网络 / 系统
 - TCP/IP详解卷一
-- Linux高性能服务器编程（游双）
+- UNIX网络编程（W. Richard Stevens）
 - 性能之巅（Brendan Gregg）
 
 ---
 
 ## 每日阅读计划（每天20分钟）
 
-总计约60小时阅读时间，按阶段分配书籍：
-
 | 阶段 | 周数 | 书籍 | 阅读目标 |
 | ---- | ---- | ---- | -------- |
-| 一 | 1-4周 | Effective Modern C++ | 条款1-20（智能指针、移动语义、类型推导） |
-| 二 | 5-10周 | 深入浅出DPDK | 全书精读，重点：内存管理、多核编程、收发包流程 |
-| 三 | 11-16周 | TCP/IP详解卷一 | 重点章节：TCP状态机、拥塞控制、IP路由 |
-| 四 | 17-22周 | 性能之巅 | 重点章节：CPU、内存、网络性能分析方法 |
-| 五 | 23-26周 | C++ Concurrency in Action | 重点章节：内存模型、原子操作、无锁数据结构 |
+| 一 | 1-7周 | Linux高性能服务器编程 + Effective Modern C++ | 重点：epoll、非阻塞 I/O、智能指针、移动语义 |
+| 二 | 8-19周 | Learning eBPF + BPF Performance Tools | 重点：eBPF 程序类型、map、网络 hook 点、性能分析 |
+| 三 | 20-26周 | TCP/IP详解卷一 + C++ Concurrency in Action | 重点：TCP 状态机、拥塞控制、内存模型、原子操作 |
 
 阅读方法：
 - 工作日睡前20分钟，休息日可延长至30分钟
@@ -184,10 +258,106 @@ DPDK：
 
 ---
 
+## 项目目录结构参考
+
+### 项目一：C++ P2P/NAT 网络库
+
+```
+p2p_nat_cpp/
+├── CMakeLists.txt
+├── src/
+│   ├── core/
+│   │   ├── event_loop.cpp/h      # epoll 事件循环
+│   │   ├── tcp_connection.cpp/h  # TCP 连接封装
+│   │   └── udp_socket.cpp/h      # UDP socket 封装
+│   ├── nat/
+│   │   ├── nat_detector.cpp/h    # NAT 类型探测
+│   │   └── hole_puncher.cpp/h    # UDP 打洞逻辑
+│   ├── signaling/
+│   │   ├── signaling_server.cpp  # 信令服务器
+│   │   └── signaling_client.cpp/h # 信令客户端
+│   ├── connection/
+│   │   ├── connection_state.cpp/h # 连接状态机
+│   │   ├── heartbeat.cpp/h       # 心跳保活
+│   │   └── relay.cpp/h           # 中继回退
+│   ├── util/
+│   │   ├── logger.h              # 日志（spdlog）
+│   │   └── config.cpp/h          # 配置解析
+│   └── main.cpp
+├── server/
+│   └── main.cpp              # 信令服务器入口
+├── demo/
+│   └── chat_demo.cpp         # 简易聊天示例
+├── tests/
+└── docs/
+    └── architecture.md       # 架构说明
+```
+
+### 项目二：Kubernetes eBPF 网络观测系统
+
+```
+ebpf_net_observer/
+├── CMakeLists.txt
+├── src/
+│   ├── bpf/
+│   │   ├── tcp_connect.bpf.c     # eBPF 程序：TCP 连接追踪
+│   │   ├── tcp_stats.bpf.c       # eBPF 程序：流量统计
+│   │   └── common.h              # 共享数据结构
+│   ├── agent/
+│   │   ├── bpf_loader.cpp/h      # 加载 eBPF 程序
+│   │   ├── map_reader.cpp/h      # 读取 map 数据
+│   │   ├── metrics_server.cpp/h  # Prometheus HTTP server
+│   │   └── main.cpp
+│   └── util/
+│       ├── logger.h
+│       └── config.h
+├── deploy/
+│   ├── Dockerfile
+│   ├── daemonset.yaml        # K8s DaemonSet 部署
+│   └── prometheus.yaml       # Prometheus 配置
+├── grafana/
+│   └── dashboard.json        # Grafana 大盘配置
+└── docs/
+    └── architecture.md
+```
+
+---
+
 ## 每周检查清单
 
 - [ ] 本周学习目标是否完成
 - [ ] 项目代码是否提交
-- [ ] LeetCode是否完成10题
+- [ ] LeetCode 是否完成 6 题
 - [ ] 是否有不理解的点需要下周补齐
 - [ ] 是否更新了八股文笔记
+
+---
+
+## 面试重点准备
+
+### C++ 高频
+- 智能指针实现原理（引用计数、控制块）
+- 移动语义（std::move、右值引用、完美转发）
+- RAII 资源管理
+- 内存模型（memory_order、原子操作）
+- 虚函数表、多态实现
+
+### 网络高频
+- TCP 状态机、三次握手、四次挥手
+- TCP 拥塞控制（慢启动、拥塞避免、快速重传、快速恢复）
+- epoll 原理（LT/ET、红黑树、回调机制）
+- NAT 类型、UDP 打洞原理
+- socket 编程（非阻塞、select/poll/epoll 区别）
+
+### 云原生 / eBPF 高频
+- eBPF 程序类型（kprobe/tracepoint/tc/xdp）
+- eBPF map 类型与使用场景
+- eBPF verifier 限制
+- Kubernetes 网络模型（Pod 网络、Service、CNI）
+- Service Mesh 基本原理（sidecar、流量劫持）
+
+### 系统高频
+- 进程 vs 线程、协程
+- 虚拟内存、页表、缺页中断
+- Linux 网络栈流程（收包/发包路径）
+- 文件描述符、IO 多路复用
