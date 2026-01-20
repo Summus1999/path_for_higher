@@ -451,7 +451,179 @@ private:
 代码如下：
 
 ```c++
+#include <atomic>
+#include <iostream>
+#include <string>
+#include <utility>
+using namespace std;
+template <typename T> class SharedPtr {
+  private:
+    // 控制块
+    struct ControlBlock {
+        atomic<int> use_count{1};
+        void add_ref() {
+            use_count.fetch_add(1, memory_order_relaxed);
+        }
+        bool release() {
+            return use_count.fetch_sub(1, memory_order_acq_rel) == 1;
+        }
+        int get_count() const {
+            return use_count.load(memory_order_relaxed);
+        }
+    };
+    T *_ptr = nullptr;
+    ControlBlock *_ctrl = nullptr;
 
+    // 释放资源
+    void _release() {
+        if (_ctrl && _ctrl->release()) {
+            delete _ptr;
+            delete _ctrl;
+        }
+        _ptr = nullptr;
+        _ctrl = nullptr;
+    }
+
+  public:
+    // 默认构造
+    SharedPtr() = default;
+
+    // 从裸指针构造
+    explicit SharedPtr(T *ptr) : _ptr(ptr) {
+        if (_ptr) {
+            _ctrl = new ControlBlock();
+        }
+    }
+
+    // 拷贝构造
+    SharedPtr(const SharedPtr &other) noexcept : _ptr(other._ptr), _ctrl(other._ctrl) {
+        if (_ctrl) {
+            _ctrl->add_ref();
+        }
+    }
+
+    // 移动构造
+    SharedPtr(SharedPtr &&other) noexcept : _ptr(other._ptr), _ctrl(other._ctrl) {
+        other._ptr = nullptr;
+        other._ctrl = nullptr;
+    }
+
+    // 析构
+    ~SharedPtr() {
+        _release();
+    }
+
+    // 拷贝赋值
+    SharedPtr &operator=(const SharedPtr &other) noexcept {
+        if (this != &other) {
+            _release();
+            _ptr = other._ptr;
+            _ctrl = other._ctrl;
+            if (_ctrl) {
+                _ctrl->add_ref();
+            }
+        }
+        return *this;
+    }
+
+    // 移动赋值
+    SharedPtr &operator=(SharedPtr &&other) noexcept {
+        if (this != &other) {
+            _release();
+            _ptr = other._ptr;
+            _ctrl = other._ctrl;
+            other._ptr = nullptr;
+            other._ctrl = nullptr;
+        }
+        return *this;
+    }
+
+    // 重置
+    void reset(T *ptr = nullptr) {
+        _release();
+        _ptr = ptr;
+        if (_ptr) {
+            _ctrl = new ControlBlock();
+        }
+    }
+
+    // 访问器
+    T *get() const noexcept {
+        return _ptr;
+    }
+    T &operator*() const noexcept {
+        return *_ptr;
+    }
+    T *operator->() const noexcept {
+        return _ptr;
+    }
+
+    // 引用计数
+    int use_count() const noexcept {
+        return _ctrl ? _ctrl->get_count() : 0;
+    }
+
+    // bool转换
+    explicit operator bool() const noexcept {
+        return _ptr != nullptr;
+    }
+
+    // swap
+    void swap(SharedPtr &other) noexcept {
+        std::swap(_ptr, other._ptr);
+        std::swap(_ctrl, other._ctrl);
+    }
+};
+
+// make_shared
+template <typename T, typename... Args> SharedPtr<T> make_shared(Args &&...args) {
+    return SharedPtr<T>(new T(forward<Args>(args)...));
+}
+// 测试代码
+int main() {
+    // 基本使用
+    SharedPtr<int> p1(new int(42));
+    cout << "p1: " << *p1 << ", count: " << p1.use_count() << "\n";
+
+    // 拷贝
+    SharedPtr<int> p2 = p1;
+    cout << "After copy - p1 count: " << p1.use_count() << ", p2 count: " << p2.use_count() << "\n";
+
+    // 移动
+    SharedPtr<int> p3 = move(p2);
+    cout << "After move - p1 count: " << p1.use_count() << ", p2 count: " << p2.use_count()
+         << ", p3 count: " << p3.use_count() << "\n";
+
+    // reset
+    p1.reset();
+    cout << "After p1.reset() - p3 count: " << p3.use_count() << "\n";
+
+    // make_shared
+    auto p4 = make_shared<string>("Hello SharedPtr");
+    cout << "p4: " << *p4 << ", count: " << p4.use_count() << "\n";
+
+    // 自定义类型
+    struct Point {
+        int x, y;
+        Point(int x, int y) : x(x), y(y) {
+            cout << "Point constructed\n";
+        }
+        ~Point() {
+            cout << "Point destroyed\n";
+        }
+    };
+
+    {
+        auto pt1 = make_shared<Point>(10, 20);
+        cout << "pt1: (" << pt1->x << ", " << pt1->y << ")\n";
+
+        auto pt2 = pt1;
+        cout << "count after copy: " << pt1.use_count() << "\n";
+    }
+    cout << "Point should be destroyed now\n";
+
+    return 0;
+}
 ```
 
 ## weak_ptr
